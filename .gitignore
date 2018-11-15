@@ -4,4 +4,10 @@ credit/node_modules
 credit/data
 message/node_modules
 message/data
+message/.env
+message/error.log
+message/warning.log
+credit/error.log
+credit/warning.log
+credit/.env
 npm-debug.log

@@ -11,7 +11,7 @@ module.exports = function(req, res) {
         res.statusCode = 500;
         res.end(error);
       }
-      res.end("ok");
+      res.end("OK. Credit updated");
     }
   );
 };

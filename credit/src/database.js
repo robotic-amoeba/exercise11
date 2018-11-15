@@ -1,12 +1,11 @@
 const mongoose = require("mongoose");
 
 const servers = {
-  //primary: "exercise5_mongodb_1:27018",
-  //replica: "exercise5_replica_1:27019"
-   primary: "127.0.0.1:27027",
-   replica: "127.0.0.1:27028"
+  primary: "mongodb_credit:27018",
+  replica: "replica_credit:27019"
 };
 const database = "cabify_bootcamp";
+const log = require("../logs/winstonConfig");
 
 function createConnection(name, server, database) {
   return {
@@ -22,7 +21,7 @@ function createConnection(name, server, database) {
 
 function setupConnection(connection, backup) {
   connection.conn.on("disconnected", () => {
-    console.log("Node down:", connection.name);
+    log.error("Node down:", connection.name);
     connection.isActive = false;
     if (connection.isPrimary) {
       connection.isPrimary = false;
@@ -30,7 +29,7 @@ function setupConnection(connection, backup) {
     }
   });
   connection.conn.on("reconnected", () => {
-    console.log("Node up:", connection.name);
+    log.warn("Node up:", connection.name);
     connection.isActive = true;
     connection.isPrimary = !backup.isPrimary;
   });
@@ -54,8 +53,8 @@ module.exports = {
       conn = connections.find(connection => connection.isPrimary == false);
     }
     if (conn) {
-      console.log("Requested connection:", dbKey);
-      console.log("Found:", conn.name);
+      log.info("Requested connection:", dbKey);
+      log.info("Found:", conn.name);
     }
     debugger;
     return conn.conn;
@@ -63,7 +62,7 @@ module.exports = {
 
   isReplicaOn: function() {
     replicaOn = connections[0].isActive && connections[1].isActive;
-    console.log(`Replica is ${replicaOn ? "ON" : "OFF"}`);
+    log.info(`Replica is ${replicaOn ? "ON" : "OFF"}`);
     return replicaOn;
   }
 };

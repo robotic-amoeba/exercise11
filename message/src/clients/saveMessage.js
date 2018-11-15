@@ -1,11 +1,9 @@
-const Message = require("../models/message");
 const saveMessageTransaction = require("../transactions/saveMessage");
-const debug = require("debug")("debug:saveMessage");
+const log = require("../../logs/winstonConfig");
 
 module.exports = function(messageParams, cb) {
-  debug("Saved message: ", messageParams);
+  log.info(`Saved message:  ${messageParams}`);
   return saveMessageTransaction(messageParams, (undefined, error) => {
-    console.log(error);
+    log.error(`Error in in the Save Message Transaction: ${error}`);
   });
-
 };

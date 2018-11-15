@@ -1,10 +1,9 @@
 const Queue = require("bull");
 const chargeMessage = require("../clients/chargeMessage");
-const requestsQueue = new Queue("MessageRequests", "redis://127.0.0.1:6379");
-//const requestsQueue = new Queue("MessageRequests", "redis://redis:6379");
-const debug = require("debug")("debug:requestsWorker");
+const requestsQueue = new Queue("MessageRequests", "redis://redis:6379");
+const log = require("../../logs/winstonConfig");
 
 module.exports = requestsQueue.process(job => {
-  debug("job received at requests queue: ", job.data);
+  log.info(`Job at requests worker: ${job.data}` );
   chargeMessage(job.data);
 });

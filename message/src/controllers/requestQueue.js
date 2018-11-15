@@ -1,11 +1,13 @@
 const uuidv1 = require("uuid/v1");
 const Queue = require("bull");
-const debug = require("debug")("debug:requestQueue");
-const requestsQueue = new Queue("MessageRequests", "redis://127.0.0.1:6379");
 const saveMessage = require("../clients/saveMessage");
+const log = require("../../logs/winstonConfig");
 
-const ProcessedRequests = new Queue("ProcessedRequests", "redis://127.0.0.1:6379");
+const requestsQueue = new Queue("MessageRequests", "redis://redis:6379");
+const ProcessedRequests = new Queue("ProcessedRequests", "redis://redis:6379");
+
 let processDownTheAppIsHealthy = true;
+
 ProcessedRequests.on("global:paused", () => {
   processDownTheAppIsHealthy = false;
 });
@@ -23,14 +25,14 @@ module.exports = (req, res) => {
     },
     function(_result, error) {
       if (error) {
-        console.log(error);
+        log(`Error in Save Message Transaction: ${error}`);
       }
     }
   );
   requestsQueue
     .add(httpbody)
     .then(job => {
-      debug("created a job succesfully");
+      log.info("created a job succesfully");
       if (processDownTheAppIsHealthy) {
         res.status(200).send(
           `Request received. Check the status at: http://--/messages/${httpbody.requestID}/status`
@@ -40,7 +42,6 @@ module.exports = (req, res) => {
       }
     })
     .catch(e => {
-      debug("error while trying to add a job to the queue: requestsQueue");
-      console.log(e);
+      log.error(`Error while trying to add a job to the requests queue: ${e}`);
     });
 };

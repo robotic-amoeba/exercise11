@@ -1,14 +1,15 @@
 const database = require("../database");
 const Credit = require("../models/credit");
 const { cleanClone } = require("../utils");
-const debug = require("debug")("debug:updateCredit");
+const log = require("../../logs/winstonConfig");
 
 function updateCredit(creditModel, conditions, newValue) {
-  return creditModel.findOneAndUpdate(conditions, newValue, {
-    new: true,
-    upsert: true,
-    setDefaultsOnInsert: true
-  });
+  return creditModel
+    .findOneAndUpdate(conditions, newValue, {
+      new: true,
+      upsert: true,
+      setDefaultsOnInsert: true
+    })
 }
 
 function updateCreditTransaction(conditions, newValue) {
@@ -20,29 +21,30 @@ function updateCreditTransaction(conditions, newValue) {
   return Promise.resolve(CreditPrimary.findOne(conditions))
     .then(doc => {
       oldValue = doc;
-      debug("Old value for credit was: ", doc);
+      log.info(`Old credit was ${doc}`);
     })
     .then(() => {
       return updateCredit(CreditPrimary, conditions, newValue).then(doc => {
-        console.log("Credit updated successfully", doc);
+        log.info(`Credit updated successfully to ${doc.amount}`);
         return doc;
       });
     })
     .then(cleanClone)
     .then(replica => {
       return updateCredit(CreditReplica, conditions, replica).then(doc => {
-        console.log("Credit replicated successfully", doc);
+        log.info(`Credit replicated successfully: ${doc.amount}`);
         return doc;
       });
     })
     .then(doc => {
       if (doc == null) {
+        log.error(`Credit transaction couldn't be replicated`);
         throw "Credit transaction couldn't be replicated";
       }
       return doc;
     })
     .catch(err => {
-      console.log("Error saving credit transaction:", err);
+      log.error(`Error saving credit transaction: ${err}`);
       if (oldValue) {
         oldValue.markModified("amount");
         oldValue.save().then(() => {
@@ -64,7 +66,7 @@ module.exports = function(conditions, newValue, cb) {
   } else {
     return updateCredit(Credit(), conditions, newValue)
       .then(doc => {
-        console.log("Credit updated successfully", doc);
+        log.info(`Credit updated successfully ${doc}`);
         cb(doc);
       })
       .catch(err => {

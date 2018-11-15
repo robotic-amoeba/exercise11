@@ -1,13 +1,13 @@
 const updateCreditTransaction = require("../transactions/updateCredit");
 const getCredit = require("./getCredit");
-const debug = require("debug")("debug:chargeMessage");
 const addToProcessedQueue = require("../controllers/processedQueue");
+const log = require("../../logs/winstonConfig");
 
 module.exports = function(message) {
   const query = getCredit();
 
   query.exec(function(err, credit) {
-    if (err) return console.log(err);
+    if (err) return log.error(`Error in mongo getCredit query: ${err}`);
 
     current_credit = credit[0].amount;
 
@@ -16,7 +16,7 @@ module.exports = function(message) {
     }
 
     if (current_credit > 0) {
-      debug(`Found credit (${credit}) in the if statatement`);
+      log.info(`Found credit (${credit[0].amount})`);
       updateCreditTransaction(
         {
           amount: { $gte: 1 },
@@ -31,7 +31,7 @@ module.exports = function(message) {
           } else if (doc == undefined) {
             let error = "Not enough credit";
             message.staus = "NO CREDIT";
-            console.log(error);
+            log.error(`Error in the updateCreditTransaction ${error}`);
             cb(undefined, error);
           }
         }
@@ -40,8 +40,7 @@ module.exports = function(message) {
         addToProcessedQueue(message);
       });
     } else {
-      debug("Found not enough credit in the if statement: ", credit);
-      //THROW EVENT TO WARN MESSAGE: NOT ENOUGH CREDIT
+      log.info(`Not enough credit found: ${credit}`);
       message.status = "NO CREDIT";
       addToProcessedQueue(message);
     }

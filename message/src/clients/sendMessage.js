@@ -1,8 +1,9 @@
 const saveMessage = require("./saveMessage");
-const debug = require("debug")("debug:sendMessage");
+const log = require("../../logs/winstonConfig");
+
 const axios = require("axios");
 const messageAPP = axios.create({
-  baseURL: "http://localhost:3000",
+  baseURL: "http://messageapp:3000",
   timeout: 2000
 });
 
@@ -40,19 +41,19 @@ function requestToMessageAPP(message, job) {
     });
 }
 
-circuit.on("timeout", a => console.log("TIMEOUT: timeout in the circuit", a));
+circuit.on("timeout", a => log.error(`TIMEOUT: timeout in the circuit. App going slow.`));
 circuit.on("reject", () => {
-  console.log(`REJECT: The circuit is open. Failing fast.`);
+  log.warn(`REJECT: The circuit is open. Failing fast.`);
 });
 circuit.on("close", () => {
-  console.log("CIRCUIT CLOSED");
+  log.warn("CIRCUIT CLOSED");
 });
 circuit.on("open", () => {
-  ProcessedRequests.pause(false).then(console.log("Processed req queue stopped"));
-  console.log("CIRCUIT OPENED");
+  ProcessedRequests.pause(false).then(log.warn("Processed req queue stopped"));
+  log.warn("CIRCUIT OPENED");
 });
 circuit.on("halfOpen", () => {
-  ProcessedRequests.resume(false).then(console.log("Processed req queue resumed"));
+  ProcessedRequests.resume(false).then(log.warn("Processed req queue resumed"));
 });
 
 module.exports = function(job) {
@@ -67,17 +68,17 @@ module.exports = function(job) {
       .then(message => {
         if (message) {
           saveMessage(message);
-          console.log("Succeded: ", message);
+          log.info(`Success in request to messageapp: ${message}`);
         }
       })
-      .catch(e => console.error("Error inside the circuit: ", e));
+      .catch(e => log.error(`Error inside the circuit: ${e}`));
 
     circuit.fallback(message => {
       if (message.status) {
         saveMessage(message);
-        console.log("Failed: ", message);
+        log.warn("Failed request to messageapp: ", message);
       } else {
-        console.log("Failed: ", message);
+        log.warn("Failed request to messageapp: ", message);
         setTimeout(() => ProcessedRequests.add(job.data), 5000);
       }
     });

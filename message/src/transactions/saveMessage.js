@@ -1,7 +1,6 @@
-const database = require("../database");
 const Message = require("../models/message");
 const { cleanClone } = require("../utils");
-const debug = require("debug")("debug:saveMessageTransaction");
+const log = require("../../logs/winstonConfig")
 
 function saveMessageReplica(replica, retries) {
   if (retries > 0) {
@@ -9,12 +8,11 @@ function saveMessageReplica(replica, retries) {
     return replica
       .save()
       .then(doc => {
-        debug("Message replicated successfully", doc);
+        log.info(`Message replicated successfully: ${doc}`);
         return doc;
       })
       .catch(err => {
-        console.log("Error while saving message replica", err);
-        console.log("Retrying...");
+        log.error(`Error while saving message replica: ${err}`);
         return saveMessageReplica(replica, retries - 1);
       });
   }
@@ -25,11 +23,11 @@ function saveMessageTransaction(newValue) {
   const MessageReplica = Message("replica");
 
   let message = new MessagePrimary(newValue);
-  debug("message at transaction: ", message);
+  log.info(`Message at transaction: ${message}`);
   return message
     .save()
     .then(doc => {
-      debug("Message saved successfully:", doc);
+      log.info(`Message saved successfully: ${doc}`);
       return cleanClone(doc);
     })
     .then(clone => {
@@ -38,7 +36,7 @@ function saveMessageTransaction(newValue) {
       return clone;
     })
     .catch(err => {
-      console.log("Error while saving message", err);
+      log.error(`Error while saving message in main DB: ${err}`);
       throw err;
     });
 }
