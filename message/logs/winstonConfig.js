@@ -10,9 +10,8 @@ if (process.env.env === "development") {
 const log = createLogger({
   level: "info",
   format: format.combine(
-    format.label({ label: 'Message Service' }),
-    format.timestamp(),
-    format.prettyPrint()
+    format.colorize(),
+    format.simple()
   ),
   transports: [
     new transports.Console({ consoleLevel }),

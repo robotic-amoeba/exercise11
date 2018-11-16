@@ -10,12 +10,11 @@ const getStatus = require("./src/controllers/getStatus");
 
 const app = express();
 
-const client = require("prom-client");
-const collectDefaultMetrics = client.collectDefaultMetrics;
-const Registry = client.Registry;
-const register = new Registry();
-collectDefaultMetrics({ register });
+const evaluators = require("./src/metrics/gauge");
 
+const client = require("prom-client");
+
+client.collectDefaultMetrics({ timeout: 1000 });
 
 const validator = new Validator({ allErrors: true });
 const { validate } = validator;
@@ -43,6 +42,11 @@ const messageSchema = {
 
 const payedReqWorker = require("./src/controllers/payedReqWorker");
 
+app.use((req, res, next)=>{
+  evaluators.reqCounter();
+  next();
+})
+
 app.post("/messages", bodyParser.json(), validate({ body: messageSchema }), requestQueue);
 
 app.get("/messages", getMessages);
@@ -50,12 +54,13 @@ app.get("/messages", getMessages);
 app.get("/messages/:requestID/status", getStatus);
 
 app.get("/metrics", (req, res) => {
-  res.set("Content-Type", register.contentType);
-  res.end(register.metrics());
+  res.set("Content-Type", client.register.contentType);
+  res.end(client.register.metrics());
 });
 
 app.use(function(err, req, res, next) {
-  log.error(`Error captured in middlewere: ${err}`);
+  log.info(`Error captured in middlewere: ${err}`);
+  evaluators.not200Counter();
   if (err instanceof ValidationError) {
     res.sendStatus(400);
   } else {

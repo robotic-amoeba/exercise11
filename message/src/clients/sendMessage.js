@@ -16,27 +16,24 @@ const circuitBreaker = require("opossum");
 const circuit = circuitBreaker(requestToMessageAPP, options);
 
 const Queue = require("bull");
-const ProcessedRequests = new Queue("ProcessedRequests", "redis://127.0.0.1:6379");
+const ProcessedRequests = new Queue("ProcessedRequests", "redis://redis:6379");
 
 function requestToMessageAPP(message, job) {
   return messageAPP
     .post("/message", message)
     .then(response => {
-      debug("Success sending the message: Response: ", response.data);
       message.status = "OK";
       job.remove();
       return message;
     })
     .catch(error => {
       message.status = "ERROR";
-      debug("Error in messageapp");
       if (error.response || error.request) {
         if (error.code && error.code === "ECONNABORTED") {
           message.status = "TIMEOUT";
           throw "TIMEOUT";
         }
       }
-      ProcessedRequests.add(job.data);
       throw "ERROR";
     });
 }
@@ -55,6 +52,8 @@ circuit.on("open", () => {
 circuit.on("halfOpen", () => {
   ProcessedRequests.resume(false).then(log.warn("Processed req queue resumed"));
 });
+
+ProcessedRequests.resume(false).then(log.warn("Processed req queue resumed"));
 
 module.exports = function(job) {
   const messageReq = job.data;
@@ -76,11 +75,9 @@ module.exports = function(job) {
     circuit.fallback(message => {
       if (message.status) {
         saveMessage(message);
-        log.warn("Failed request to messageapp: ", message);
-      } else {
-        log.warn("Failed request to messageapp: ", message);
-        setTimeout(() => ProcessedRequests.add(job.data), 5000);
       }
+      log.warn("Failed request to messageapp: ", message);
+      setTimeout(() => ProcessedRequests.add(job.data), 5000);
     });
   } else {
     saveMessage(messageReq);
