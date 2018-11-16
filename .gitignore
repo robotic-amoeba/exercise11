@@ -11,3 +11,4 @@ credit/error.log
 credit/warning.log
 credit/.env
 npm-debug.log
+grafana.ini

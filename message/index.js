@@ -1,5 +1,5 @@
-const http = require("http");
 const express = require("express");
+const log = require("./logs/winstonConfig");
 
 const bodyParser = require("body-parser");
 const { Validator, ValidationError } = require("express-json-validator-middleware");
@@ -9,6 +9,13 @@ const getMessages = require("./src/controllers/getMessages");
 const getStatus = require("./src/controllers/getStatus");
 
 const app = express();
+
+const client = require("prom-client");
+const collectDefaultMetrics = client.collectDefaultMetrics;
+const Registry = client.Registry;
+const register = new Registry();
+collectDefaultMetrics({ register });
+
 
 const validator = new Validator({ allErrors: true });
 const { validate } = validator;
@@ -42,8 +49,13 @@ app.get("/messages", getMessages);
 
 app.get("/messages/:requestID/status", getStatus);
 
+app.get("/metrics", (req, res) => {
+  res.set("Content-Type", register.contentType);
+  res.end(register.metrics());
+});
+
 app.use(function(err, req, res, next) {
-  console.log(res.body);
+  log.error(`Error captured in middlewere: ${err}`);
   if (err instanceof ValidationError) {
     res.sendStatus(400);
   } else {
@@ -53,5 +65,5 @@ app.use(function(err, req, res, next) {
 
 const port = 9011;
 app.listen(port, function() {
-  console.log(`App started on PORT ${port}`);
+  log.info(`App started on PORT ${port}`);
 });
